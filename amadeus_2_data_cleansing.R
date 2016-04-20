@@ -8,12 +8,22 @@
 
 setwd("D:/Amadeus")
 
+## --------------------------------------------------------------
+## Stage 2: Data cleansing
+## (1) Standardize data separators and remove unsed whitespaces
+##     [bookings.csv --> bookings_clean.csv]
+##     [searches.csv --> searches_clean.csv]
+## (2) Filter out error data lines and fix them
+##     [bookings_clean.csv --> bookings_clean2.csv]
+##     [searches_clean.csv --> searches_clean2.csv]
+## --------------------------------------------------------------
+
 ## ==============================================================
 ## Data cleansing [bookings.csv]
 ## ==============================================================
 
 ## --------------------------------------------------------------
-## Clean these following errors: [bookings_clean.csv]
+## Clean these following errors:
 ## (1) Convert "," to "^"
 ## (2) Convert "[:space:]^" to "^"
 ## (3) Remove trailling whitespace
@@ -22,6 +32,8 @@ setwd("D:/Amadeus")
 file.in <- file("bookings.csv","r")
 file.out <- file("bookings_clean.csv","a")
 x <- readLines(file.in,n=1)
+
+## Cleansing data for the headers
 ind <- gsub(",","^",x) # Convert all "," to "^"
 ind <- gsub(" +\\^","^",ind) # Convert all "[:space:]^" to "^"
 ind <- gsub(" +$","",ind) # Remove trailing whitespace
@@ -31,9 +43,9 @@ block <- 500000 # Size of each data block
 count <- 0 # Count how many lines
 repeat {
   x <- readLines(file.in,n=block)
-  if (length(x)==0) break # End of file
-  last.line <- count
-  count <- count + length(x)
+  if (length(x)==0) break # End of file checking
+  last.line <- count # Last line of previous data block
+  count <- count + length(x) # Last line of current data block
   print(paste0("# WORKING ON LINE: ",last.line+1," --> ",count))
   
   ind <- gsub(",","^",x) # Convert all "," to "^"
@@ -45,19 +57,19 @@ repeat {
 close(file.in)
 close(file.out)
 
-# 10000010 lines
-# 38 vars, 37 separators
+## 10000010 lines
+## 38 vars, 37 separators ("^")
 
 ## --------------------------------------------------------------
-## Read through line by line to detect and clean data error
+## Read through line by line, extract error lines
 ## --------------------------------------------------------------
 
 # install.packages("stringr")
 library(stringr)
 
-error.count = 0
-error.line = c()
-error.data = c()
+error.count = 0 # Numbers of error found
+error.line = c() # List of error lines
+error.data = c() # List of error data
 
 file.in <- file("bookings_clean.csv","r")
 x <- readLines(file.in,n=1) # Read headers
@@ -66,14 +78,14 @@ block <- 500000 # Size of each data block
 count <- 0 # Count how many lines
 repeat {
   x <- readLines(file.in,n=block)
-  if (length(x)==0) break # End of file
-  last.line <- count
-  count <- count + length(x)
+  if (length(x)==0) break # End of file checking
+  last.line <- count # Last line of previous data block
+  count <- count + length(x) # Last line of current data block
   print(paste0("# WORKING ON LINE: ",last.line+1," --> ",count))
   
-  # Look for line with different numbers of separator
+  ## Look for line with different numbers of separator
   for (i in 1:length(x))
-    if (str_count(x[i],"\\^")!=37) {
+    if (str_count(x[i],"\\^")!=37) { # Error line detecting
       print(paste0("Error line: ",last.line+i))
       # print(x[i])
       error.count <- error.count+1
@@ -84,49 +96,41 @@ repeat {
 
 close(file.in)
 
-file.out = file("bookings_errors.csv","a")
+## Print out error lines
+file.out = file("error_fixing/bookings_errors.csv","a")
 for (i in 1:error.count)
   writeLines(paste0(error.line[i],"^",error.data[i]),file.out)
 close(file.out)
 
 ## --------------------------------------------------------------
-## Fix error lines
+## Fix error lines in Excel, load back and Write fixed data to file
 ## --------------------------------------------------------------
 
-# install.packages("reader")
-library(reader)
-
-# Extract line 5000008 and 5000009
-error.lines = n.readLines("bookings_clean2.csv",skip=5000008,n=2,header=F)
-
-## Fix data error
-fix.5000008 = c("2013-03-25 00:00:00^1V^JP^a37584d1485cb35991e4ff1a2ba92262^^^2013-03-25 00:00:00^8371^60^NRT^TYO^JP^SIN^SIN^SG^HND^TYO^JP^NRT^TYO^JP^SIN^SIN^SG^NRTSIN^SINTYO^JPSG^1^NRTSIN^XR^Q^Y^2013-04-14 11:05:00^2013-04-14 17:10:56^2^2013^3^NULL")
-fix.5000009 = c("2013-03-25 00:00:00^1V^JP^5af045902bd23cab579915611d99e1e0^5073861d8597467c33596bfe16f23c56^a37584d1485cb35991e4ff1a2ba92262^2013-03-25 00:00:00^8371^60^NRT^TYO^JP^SIN^SIN^SG^HND^TYO^JP^SIN^SIN^SG^PEN^PEN^MY^PENSIN^PENSIN^MYSG^1^SINPEN^WS^Y^Y^2013-04-16 15:45:00^2013-04-16 17:15:29^2^2013^3^NULL")
-
-## --------------------------------------------------------------
-## Write clean data to file [bookings_clean2.csv]
-## --------------------------------------------------------------
+fixed.lines <- read.table("error_fixing/bookings_errors_fixed.csv",
+                          sep=",",header=F,stringsAsFactors=F)
+mark <- rep(T,nrow(fixed.lines))
 
 file.in <- file("bookings_clean.csv","r")
 file.out <- file("bookings_clean2.csv","a")
-x <- readLines(file.in,n=1)
+x <- readLines(file.in,n=1) # Read headers
 writeLines(x,file.out)
 
 block <- 500000 # Size of each data block
 count <- 0 # Count how many lines
 repeat {
   x <- readLines(file.in,n=block)
-  if (length(x)==0) break # End of file
-  last.line <- count
-  count <- count + length(x)
+  if (length(x)==0) break # End of file checking
+  last.line <- count # Last line of previous data block
+  count <- count + length(x) # Last line of current data block
   print(paste0("# WORKING ON LINE: ",last.line+1," --> ",count))
   
   ## Replace error lines
-  if (count==5500000) { # This block contain detected error lines
-    print("Fixing...")
-    x[8] <- fix.5000008
-    x[9] <- fix.5000009
-  }
+  for (i in 1:nrow(fixed.lines))
+    if (mark[i] & (fixed.lines[i,1] %in% (last.line+1):count)) {
+      print(paste0("Fixing line: ",fixed.lines[i,1]))
+      x[fixed.lines[i,1]-last.line] <- fixed.lines[i,2]
+      mark[i] <- F # Mark this line as done (FALSE)
+    }
   
   writeLines(x,file.out)
 }
@@ -135,7 +139,7 @@ close(file.in)
 close(file.out)
 
 ## --------------------------------------------------------------
-## Read through file again to confirm NO error [bOokings_clean2.csv]
+## Use read.table() to read through file again to confirm NO error
 ## --------------------------------------------------------------
 
 file.in <- file("bookings_clean2.csv","r")
@@ -145,31 +149,22 @@ block <- 500000 # Size of each data block
 count <- 0 # Count how many lines
 repeat {
   x <- read.table(file.in,header=F,nrows=block,sep="^",na.strings="")
-  if (length(x)==0) break # End of file
-  last.line <- count
-  count <- count + nrow(x)
+  if (length(x)==0) break # End of file checking
+  last.line <- count # Last line of previous data block
+  count <- count + nrow(x) # Last line of current data block
   print(paste0("# WORKING ON LINE: ",last.line+1," --> ",count))
 }
 
 close(file.in)
 
-## ==============================================================
-## Importing data [bookings.csv]
-## ==============================================================
-
-bookings.vars <- readLines(con="bookings_vars.csv")
-searches.vars <- readLines(con="searches_vars.csv")
-
-library(ff)
-bookings <- read.table.ffdf(file="bookings_clean2.csv",FUN="read.csv",
-                            header=T,sep="^",comment.char="",na.strings="")
+## NO error confirmed [YEAH!]
 
 ## ==============================================================
 ## Data cleansing [searches.csv]
 ## ==============================================================
 
 ## --------------------------------------------------------------
-## Clean these following errors: [searches.csv]
+## Clean these following errors:
 ## (1) Convert "," to "^"
 ## (2) Convert "[:space:]^" to "^"
 ## (3) Remove trailling whitespace
@@ -178,6 +173,8 @@ bookings <- read.table.ffdf(file="bookings_clean2.csv",FUN="read.csv",
 file.in <- file("searches.csv","r")
 file.out <- file("searches_clean.csv","a")
 x <- readLines(file.in,n=1)
+
+## Cleansing data for headers
 ind <- gsub(",","^",x) # Convert all "," to "^"
 ind <- gsub(" +\\^","^",ind) # Convert all "[:space:]^" to "^"
 ind <- gsub(" +$","",ind) # Remove trailing whitespace
@@ -187,9 +184,9 @@ block <- 500000 # Size of each data block
 count <- 0 # Count how many lines
 repeat {
   x <- readLines(file.in,n=block)
-  if (length(x)==0) break # End of file
-  last.line <- count
-  count <- count + length(x)
+  if (length(x)==0) break # End of file checking
+  last.line <- count # Last line of previous data block
+  count <- count + length(x) # Last line of current data block
   print(paste0("# WORKING ON LINE: ",last.line+1," --> ",count))
   
   ind <- gsub(",","^",x) # Convert all "," to "^"
@@ -201,8 +198,8 @@ repeat {
 close(file.in)
 close(file.out)
 
-# 20390198 lines
-# 45 vars, 44 separators
+## 20390198 lines
+## 45 vars, 44 separators ("^")
 
 ## --------------------------------------------------------------
 ## Read through line by line to detect and clean data error
@@ -211,9 +208,9 @@ close(file.out)
 # install.packages("stringr")
 library(stringr)
 
-error.count = 0
-error.line = c()
-error.data = c()
+error.count = 0 # Numbers of error found
+error.line = c() # List of error lines
+error.data = c() # List of error data
 
 file.in <- file("searches_clean.csv","r")
 x <- readLines(file.in,n=1) # Read headers
@@ -222,14 +219,14 @@ block <- 500000 # Size of each data block
 count <- 0 # Count how many lines
 repeat {
   x <- readLines(file.in,n=block)
-  if (length(x)==0) break # End of file
-  last.line <- count
-  count <- count + length(x)
+  if (length(x)==0) break # End of file checking
+  last.line <- count # Last line of previous data block
+  count <- count + length(x) # Last line of current data block
   print(paste0("# WORKING ON LINE: ",last.line+1," --> ",count))
   
-  # Look for line with different numbers of separator
+  ## Look for line with different numbers of separator
   for (i in 1:length(x))
-    if (str_count(x[i],"\\^")!=44) {
+    if (str_count(x[i],"\\^")!=44) { # Error line detecting
       print(paste0("Error line: ",last.line+i))
       # print(x[i])
       error.count <- error.count+1
@@ -240,49 +237,42 @@ repeat {
 
 close(file.in)
 
-file.out = file("searches_errors.csv","a")
+## Print out error lines
+file.out = file("error_fixing/searches_errors.csv","a")
 for (i in 1:error.count)
   writeLines(paste0(error.line[i],"^",error.data[i]),file.out)
 close(file.out)
 
 ## --------------------------------------------------------------
-## Fix error lines
+## Fix error lines in Excel, load back and write fixed data to file
 ## --------------------------------------------------------------
 
-# install.packages("reader")
-library(reader)
+fixed.lines <- read.table("error_fixing/searches_errors_fixed.csv",
+                          sep=",",header=F,stringsAsFactors=F)
+mark <- rep(T,nrow(fixed.lines))
 
-# Extract line 5000008 and 5000009
-error.lines = n.readLines("bookings_clean2.csv",skip=5000008,n=2,header=F)
-
-## Fix data error
-fix.5000008 = c("2013-03-25 00:00:00^1V^JP^a37584d1485cb35991e4ff1a2ba92262^^^2013-03-25 00:00:00^8371^60^NRT^TYO^JP^SIN^SIN^SG^HND^TYO^JP^NRT^TYO^JP^SIN^SIN^SG^NRTSIN^SINTYO^JPSG^1^NRTSIN^XR^Q^Y^2013-04-14 11:05:00^2013-04-14 17:10:56^2^2013^3^NULL")
-fix.5000009 = c("2013-03-25 00:00:00^1V^JP^5af045902bd23cab579915611d99e1e0^5073861d8597467c33596bfe16f23c56^a37584d1485cb35991e4ff1a2ba92262^2013-03-25 00:00:00^8371^60^NRT^TYO^JP^SIN^SIN^SG^HND^TYO^JP^SIN^SIN^SG^PEN^PEN^MY^PENSIN^PENSIN^MYSG^1^SINPEN^WS^Y^Y^2013-04-16 15:45:00^2013-04-16 17:15:29^2^2013^3^NULL")
-
-## --------------------------------------------------------------
-## Write clean data to file [searches_clean2.csv]
-## --------------------------------------------------------------
-
-file.in <- file("bookings_clean.csv","r")
-file.out <- file("bookings_clean2.csv","a")
+file.in <- file("searches_clean.csv","r")
+file.out <- file("searches_clean2.csv","a")
 x <- readLines(file.in,n=1)
 writeLines(x,file.out)
 
 block <- 500000 # Size of each data block
 count <- 0 # Count how many lines
-while (length(x)) {
+repeat {
   x <- readLines(file.in,n=block)
-  if (length(x)==0) break # End of file
-  count <- count + length(x)
-  print(paste0("# WORKING ON LINE: ",count-block+1," --> ",count))
+  if (length(x)==0) break # End of file checking
+  last.line <- count # Last line of previous data block
+  count <- count + length(x) # Last line of current data block
+  print(paste0("# WORKING ON LINE: ",last.line+1," --> ",count))
   
   ## Replace error lines
-  if (count==5500000) { # This block contain detected error lines
-    print("Fixing...")
-    x[8] <- fix.5000008
-    x[9] <- fix.5000009
-  }
-  
+  for (i in 1:nrow(fixed.lines))
+    if (mark[i] & (fixed.lines[i,1] %in% (last.line+1):count)) {
+      print(paste0("Fixing line: ",fixed.lines[i,1]))
+      x[fixed.lines[i,1]-last.line] <- fixed.lines[i,2]
+      mark[i] <- F # Mark this line as done (FALSE)
+    }
+
   writeLines(x,file.out)
 }
 
@@ -290,19 +280,24 @@ close(file.in)
 close(file.out)
 
 ## --------------------------------------------------------------
-## Read through file again to confirm NO error [bOokings_clean2.csv]
+## Using read.table() to read through file again to confirm NO error
 ## --------------------------------------------------------------
 
-file.in <- file("bookings_clean2.csv","r")
+file.in <- file("searches_clean2.csv","r")
 x <- readLines(file.in,n=1) # Read headers
 
 block <- 500000 # Size of each data block
 count <- 0 # Count how many lines
-while (length(x)) {
+repeat {
   x <- read.table(file.in,header=F,nrows=block,sep="^",na.strings="")
-  if (length(x)==0) break # End of file
-  count <- count + nrow(x)
-  print(paste0("# WORKING ON LINE: ",count-block+1," --> ",count))
+  if (length(x)==0) break # End of file checking
+  last.line <- count # Last line of previous data block
+  count <- count + nrow(x) # Last line of current data block
+  print(paste0("# WORKING ON LINE: ",last.line+1," --> ",count))
 }
 
 close(file.in)
+
+## ==============================================================
+## Last modified on 20 Apr 2016. Minh Phan.
+## ==============================================================

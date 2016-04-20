@@ -8,6 +8,13 @@
 
 setwd("D:/Amadeus")
 
+## --------------------------------------------------------------
+## Stage 1: Data exploration
+## (1) Read some samples data
+## (2) Explore the data structure and types
+## (3) Get some first idea about the data sets
+## --------------------------------------------------------------
+
 ## ==============================================================
 ## Data exploration [bookings.csv]
 ## ==============================================================
@@ -16,8 +23,9 @@ setwd("D:/Amadeus")
 library(ff)
 
 bookings <- read.table.ffdf(file="bookings.csv",sep="^",nrows=100,header=T)
-str(bookings[,])
+str(bookings[,]) # Explore data structure, identify variables' types
 
+## Manual set variables' types
 bookings.vars <- c("POSIXct", # act_date
                    "factor", # source
                    "factor", # pos_ctry
@@ -65,8 +73,9 @@ writeLines(bookings.vars,con="bookings_vars.csv")
 ## ==============================================================
 
 searches <- read.table.ffdf(file="searches.csv",sep="^",nrows=100,header=T)
-str(searches[,])
+str(searches[,]) # Explore data structure, identify variables' types
 
+## Manual set variables' types
 searches.vars <- c("Date", # Date
                    "POSIXct", # Time
                    "factor", # TxnCode
