@@ -15,21 +15,106 @@ setwd("D:/Amadeus")
 ## --------------------------------------------------------------
 
 ## ==============================================================
-## Data analyzing [bookings.csv]
+## Question 1: Count number of lines in each files
 ## ==============================================================
 
-bookings.vars <- readLines(con="bookings_vars.csv")
-searches.vars <- readLines(con="searches_vars.csv")
+library(sqldf)
 
-# install.packages("ff")
-library(ff)
+## --------------------------------------------------------------
+## Read [bookings_clean2.csv]
+## --------------------------------------------------------------
 
-bookings <- read.table.ffdf(file="bookings_clean2.csv",FUN="read.csv",
-                            header=T,sep="^",comment.char="",na.strings="")
+## Only import these columns: arr_port, pax, year
+bookings_sql <- read.csv.sql(file="bookings_clean2.csv",header=T,sep="^",
+                         sql="select arr_port, pax, year from file")
+nrow(bookings_sql)
 
-searches <- read.table.ffdf(file="searches_clean2.csv",FUN="read.csv",
-                            header=T,sep="^",comment.char="",na.strings="")
+## 10000010 lines of data (NOT include the header line)
+## 38 variables, 37 separators per line
+
+## --------------------------------------------------------------
+## Read [searches_clean2.csv]
+## --------------------------------------------------------------
+
+## Only import these columns: Date, Destination
+searches_sql <- read.csv.sql(file="searches_clean2.csv",header=T,sep="^",
+                             sql="select Date, Destination from file")
+nrow(searches_sql)
+
+## 20390198 lines of data (NOT include the header line)
+## 45 variables, 44 separators per line
+
+write.csv(c(10000010,20390198),"results/q1_num_rows.csv",row.names=F)
 
 ## ==============================================================
-## Last modified on 20 Apr 2016. Minh Phan.
+## Question 2: Top 10 arrival airports in the world in 2013
+## ==============================================================
+
+## Sum and group by arr_port
+port <- sqldf("select year, arr_port, sum(pax) as sum_pax
+                from bookings_sql
+                group by year, arr_port")
+unique(port[,"year"]) # Checking data range, only in 2013
+
+top10.port <- head(port[order(port[,"sum_pax"],decreasing=T),],10)
+write.csv(top10.port,"results/q2_top10_arr_port.csv",row.names=F)
+
+## LHR  88809   London            Heathrow
+## MCO  70930   Orlando           International
+## LAX  70530   Los Angeles       International/ Metropolitan Area
+## LAS  69630   Las Vegas         McCarran International/	Metropolitan Area
+## JFK  66270   New York          John F Kennedy Intl
+## CDG  64490   Paris             Charles de Gaulle
+## BKK  59460   Bangkok           Suvarnabhumi Int'l/ Metropolitan Area
+## MIA  58150   Miami             International/ Metropolitan Area
+## SFO  58000   San Francisco     International
+## DXB  55590   Dubai             International/ Metropolitan Area
+
+## IATA codes: http://www.iata.org/publications/Pages/code-search.aspx
+
+## ==============================================================
+## Question 3: Plot monthly number of searches for flights 
+## arriving at Malaga, Madrid or Barcelona
+## ==============================================================
+
+## Malaga       AGP
+## Madrid       MAD, CLQ, TOJ
+## Barcelona    BCN, BLA
+
+## Sum and group by year, month, Destination
+dest <- sqldf("select substr(Date,1,4) as year, substr(Date,6,2) as month,
+                      Destination, count(*) as count_search
+                from searches_sql
+                group by year, month, Destination")
+unique(dest[,"year"]) # Checking data range, only in 2013
+
+## Flights arriving at Malaga
+dest.Malaga <- dest[dest[,"Destination"] %in% c("AGP"),c("month","count_search")]
+
+## Flights arriving at Madrid
+dest.Madrid <- dest[dest[,"Destination"] %in% c("MAD","CLQ","TOJ"),]
+dest.Madrid <- aggregate(count_search~month,data=dest.Madrid,sum)
+
+## Flights arriving at Barcelona
+dest.Barcelona <- dest[dest[,"Destination"] %in% c("BCN","BLA"),]
+dest.Barcelona <- aggregate(count_search~month,data=dest.Barcelona,sum)
+
+## Final results
+dest.result <- cbind(dest.Malaga,dest.Madrid$count_search,dest.Barcelona$count_search)
+names(dest.result) <- c("Month","Malaga","Madrid","Barcelona")
+write.csv(dest.result,"results/q3_monthly_searches.csv",row.names=F)
+
+## Plotting results
+library(ggplot2)
+
+ggplot(data=dest.result,aes(x=Month,group=3))+
+  geom_line(aes(y=Malaga,color="Malaga"),size=2)+
+  geom_line(aes(y=Madrid,color="Madrid"),size=2)+
+  geom_line(aes(y=Barcelona,color="Barcelona"),size=2)+
+  scale_colour_discrete(name="Destination")+
+  ylab("Search Count")+
+  ggtitle("Number of Searches Per Month in 2013")
+
+## ==============================================================
+## Last modified on 21 Apr 2016. Minh Phan.
 ## ==============================================================

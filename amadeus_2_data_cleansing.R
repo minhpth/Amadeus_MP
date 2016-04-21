@@ -30,7 +30,7 @@ setwd("D:/Amadeus")
 ## --------------------------------------------------------------
 
 file.in <- file("bookings.csv","r")
-file.out <- file("bookings_clean.csv","a")
+file.out <- file("bookings_clean.csv","w")
 x <- readLines(file.in,n=1)
 
 ## Cleansing data for the headers
@@ -64,7 +64,6 @@ close(file.out)
 ## Read through line by line, extract error lines
 ## --------------------------------------------------------------
 
-# install.packages("stringr")
 library(stringr)
 
 error.count = 0 # Numbers of error found
@@ -97,7 +96,7 @@ repeat {
 close(file.in)
 
 ## Print out error lines
-file.out = file("error_fixing/bookings_errors.csv","a")
+file.out = file("error_fixing/bookings_errors.csv","w")
 for (i in 1:error.count)
   writeLines(paste0(error.line[i],"^",error.data[i]),file.out)
 close(file.out)
@@ -111,7 +110,7 @@ fixed.lines <- read.table("error_fixing/bookings_errors_fixed.csv",
 mark <- rep(T,nrow(fixed.lines))
 
 file.in <- file("bookings_clean.csv","r")
-file.out <- file("bookings_clean2.csv","a")
+file.out <- file("bookings_clean2.csv","w")
 x <- readLines(file.in,n=1) # Read headers
 writeLines(x,file.out)
 
@@ -171,7 +170,7 @@ close(file.in)
 ## --------------------------------------------------------------
 
 file.in <- file("searches.csv","r")
-file.out <- file("searches_clean.csv","a")
+file.out <- file("searches_clean.csv","w")
 x <- readLines(file.in,n=1)
 
 ## Cleansing data for headers
@@ -205,7 +204,6 @@ close(file.out)
 ## Read through line by line to detect and clean data error
 ## --------------------------------------------------------------
 
-# install.packages("stringr")
 library(stringr)
 
 error.count = 0 # Numbers of error found
@@ -238,7 +236,7 @@ repeat {
 close(file.in)
 
 ## Print out error lines
-file.out = file("error_fixing/searches_errors.csv","a")
+file.out = file("error_fixing/searches_errors.csv","w")
 for (i in 1:error.count)
   writeLines(paste0(error.line[i],"^",error.data[i]),file.out)
 close(file.out)
@@ -252,7 +250,7 @@ fixed.lines <- read.table("error_fixing/searches_errors_fixed.csv",
 mark <- rep(T,nrow(fixed.lines))
 
 file.in <- file("searches_clean.csv","r")
-file.out <- file("searches_clean2.csv","a")
+file.out <- file("searches_clean2.csv","w")
 x <- readLines(file.in,n=1)
 writeLines(x,file.out)
 
@@ -299,5 +297,5 @@ repeat {
 close(file.in)
 
 ## ==============================================================
-## Last modified on 20 Apr 2016. Minh Phan.
+## Last modified on 21 Apr 2016. Minh Phan.
 ## ==============================================================

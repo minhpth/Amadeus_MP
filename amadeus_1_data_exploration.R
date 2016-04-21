@@ -16,10 +16,19 @@ setwd("D:/Amadeus")
 ## --------------------------------------------------------------
 
 ## ==============================================================
+## Install require packages
+## ==============================================================
+
+install.packages("ff")
+install.packages("ffbase")
+install.packages("stringr")
+install.packages("sqldf")
+install.packages("ggplot2")
+
+## ==============================================================
 ## Data exploration [bookings.csv]
 ## ==============================================================
 
-# install.packages("ff")
 library(ff)
 
 bookings <- read.table.ffdf(file="bookings.csv",sep="^",nrows=100,header=T)
@@ -38,7 +47,7 @@ bookings.vars <- c("POSIXct", # act_date
                    "factor", # dep_port
                    "factor", # dep_city
                    "factor", # dep_ctry
-                   "factor", # arr_port
+                   "factor", # arr_port (13)
                    "factor", # arr_city
                    "factor", # arr_ctry
                    "factor", # lst_port
@@ -60,8 +69,8 @@ bookings.vars <- c("POSIXct", # act_date
                    "factor", # cab_class
                    "POSIXct", # brd_time
                    "POSIXct", # off_time
-                   "integer", # pax
-                   "integer", # year
+                   "integer", # pax (35)
+                   "integer", # year (36)
                    "integer", # month
                    "factor" # oid
                    ) # End of vars list (38 vars)
@@ -72,12 +81,14 @@ writeLines(bookings.vars,con="bookings_vars.csv")
 ## Data exploration [searches.csv]
 ## ==============================================================
 
+library(ff)
+
 searches <- read.table.ffdf(file="searches.csv",sep="^",nrows=100,header=T)
 str(searches[,]) # Explore data structure, identify variables' types
 
 ## Manual set variables' types
 searches.vars <- c("Date", # Date
-                   "POSIXct", # Time
+                   "factor", # Time
                    "factor", # TxnCode
                    "factor", # OfficeID
                    "factor", # Country
