@@ -26,7 +26,9 @@ library(sqldf)
 
 ## Only import these columns: arr_port, pax, year
 bookings_sql <- read.csv.sql(file="bookings_clean2.csv",header=T,sep="^",
-                         sql="select arr_port, pax, year from file")
+                             sql="SELECT substr(act_date,1,10) AS act_date,
+                             dep_port, arr_port, pax, year
+                             FROM file")
 nrow(bookings_sql)
 
 ## 10000010 lines of data (NOT include the header line)
@@ -38,7 +40,10 @@ nrow(bookings_sql)
 
 ## Only import these columns: Date, Destination
 searches_sql <- read.csv.sql(file="searches_clean2.csv",header=T,sep="^",
-                             sql="select Date, Destination from file")
+                             sql="SELECT Date, Origin, Destination,
+                             substr(Date,1,4) AS year,
+                             substr(Date,6,2) AS month
+                             FROM file")
 nrow(searches_sql)
 
 ## 20390198 lines of data (NOT include the header line)
@@ -46,14 +51,17 @@ nrow(searches_sql)
 
 write.csv(c(10000010,20390198),"results/q1_num_rows.csv",row.names=F)
 
+write.csv(bookings_sql,"bookings_lite.csv",row.names=F,quote=F)
+write.csv(searches_sql,"searches_lite.csv",row.names=F,quote=F)
+
 ## ==============================================================
 ## Question 2: Top 10 arrival airports in the world in 2013
 ## ==============================================================
 
 ## Sum and group by arr_port
-port <- sqldf("select year, arr_port, sum(pax) as sum_pax
-                from bookings_sql
-                group by year, arr_port")
+port <- sqldf("SELECT year, arr_port, sum(pax) AS sum_pax
+              FROM bookings_sql
+              GROUP BY year, arr_port")
 unique(port[,"year"]) # Checking data range, only in 2013
 
 top10.port <- head(port[order(port[,"sum_pax"],decreasing=T),],10)
@@ -82,10 +90,10 @@ write.csv(top10.port,"results/q2_top10_arr_port.csv",row.names=F)
 ## Barcelona    BCN, BLA
 
 ## Sum and group by year, month, Destination
-dest <- sqldf("select substr(Date,1,4) as year, substr(Date,6,2) as month,
-                      Destination, count(*) as count_search
-                from searches_sql
-                group by year, month, Destination")
+dest <- sqldf("SELECT year, month, Destination,
+              count(*) AS count_search
+              FROM searches_sql
+              GROUP BY year, month, Destination")
 unique(dest[,"year"]) # Checking data range, only in 2013
 
 ## Flights arriving at Malaga
@@ -116,5 +124,73 @@ ggplot(data=dest.result,aes(x=Month,group=3))+
   ggtitle("Number of Searches Per Month in 2013")
 
 ## ==============================================================
-## Last modified on 21 Apr 2016. Minh Phan.
+## Bonus question 1: Match searches with bookings
+## ==============================================================
+
+library(ff)
+library(ffbase)
+
+## Matching criteria:
+## (1) [searches] Origin = [bookings] dep_port
+## (2) [searches] Destination = [bookings] arr_port
+## (3) [searches] Date = [bookings] act_date
+## Assume that matched search and booking should make in the same date
+
+## Read the lite version of data sets to analyze easier
+bookings_lite <- read.csv.ffdf(file="bookings_lite.csv",header=T)
+searches_lite <- read.csv.ffdf(file="searches_lite.csv",header=T)
+
+## Add match column and change columns names before merging
+bookings_lite[,"match"] <- 1
+names(bookings_lite) <- c("Date","Origin","Destination","pax","year","match")
+
+## Use ff package to merge, very fast
+match <- merge.ffdf(searches_lite,bookings_lite,by=c("Origin","Destination","Date"),all.x=T)
+match[is.na(match[,"match"]),"match"] <- 0 # Fill NA values by 0
+write.csv(match,"results/q4_match.csv",row.names=F)
+
+## Write to output searches file
+file.in <- file("searches_clean2.csv","r")
+file.out <- file("searches_clean2_match.csv","w")
+
+x <- readLines(file.in,n=1) # Read headers
+x <- paste0(x,"^","match") # Add a new column [match]
+writeLines(x,file.out) # Copy headers
+
+block <- 500000 # Size of each data block
+count <- 0 # Count how many lines
+repeat {
+  x <- read.table(file.in,header=F,nrows=block,sep="^",na.strings="")
+  if (length(x)==0) break # Checking end of file
+  last.line <- count # Last line of previous data block
+  count <- count + nrow(x) # Last line of current data block
+  print(paste0("# WORKING ON LINE: ",last.line+1," --> ",count))
+  
+  x[,"match"] <- match[c((last.line+1):count),"match"]
+  write.table(x,file.out,append=T,sep="^",quote=F,row.names=F,col.names=F,na="")
+}
+
+close(file.in)
+close(file.out)
+
+## Number of searches match with bookings: 996008
+## Number of searches NO match with bookings: 19394190
+
+## ==============================================================
+## Bonus question 2: Write a Web Service (Extract to JSON)
+## ==============================================================
+
+# install.packages("rjson")
+library(rjson)
+
+n <- 10
+topN.port <- head(port[order(port[,"sum_pax"],decreasing=T),],n)
+
+x <- toJSON(topN.port)
+cat(x)
+
+write.csv(top10.port,"results/q2_top10_arr_port.csv",row.names=F)
+
+## ==============================================================
+## Last modified on 22 Apr 2016. Minh Phan.
 ## ==============================================================
