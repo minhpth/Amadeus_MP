@@ -180,17 +180,16 @@ close(file.out)
 ## Bonus question 2: Write a Web Service (Extract to JSON)
 ## ==============================================================
 
-# install.packages("rjson")
 library(rjson)
 
-n <- 10
+n <- 100
 topN.port <- head(port[order(port[,"sum_pax"],decreasing=T),],n)
 
-x <- toJSON(topN.port)
-cat(x)
+x <- toJSON(topN.port) # Convert to JSON format
+cat(x) # Print out to check JSON file
 
-write.csv(top10.port,"results/q2_top10_arr_port.csv",row.names=F)
+writeLines(x,"results/q5_topN_arr_port_JSON.json")
 
 ## ==============================================================
-## Last modified on 22 Apr 2016. Minh Phan.
+## Last modified on 23 Apr 2016. Minh Phan.
 ## ==============================================================

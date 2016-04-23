@@ -24,6 +24,7 @@ install.packages("ffbase")
 install.packages("stringr")
 install.packages("sqldf")
 install.packages("ggplot2")
+install.packages("rjson")
 
 ## ==============================================================
 ## Data exploration [bookings.csv]
@@ -137,5 +138,5 @@ searches.vars <- c("Date", # Date
 writeLines(searches.vars,con="searches_vars.csv")
 
 ## ==============================================================
-## Last modified on 20 Apr 2016. Minh Phan.
+## Last modified on 23 Apr 2016. Minh Phan.
 ## ==============================================================
